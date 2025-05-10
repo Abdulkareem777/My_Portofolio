@@ -1,51 +1,4 @@
-import mongoose from 'mongoose';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import 'dotenv/config';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// MongoDB connection
-const mongoUri = process.env.MONGODB_URI;
-if (!mongoUri) {
-  console.error('MONGODB_URI environment variable not set');
-  process.exit(1);
-}
-
-mongoose.connect(mongoUri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
-  console.log('Connected to MongoDB');
-  migrateData();
-}).catch((err) => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
-});
-
-// Define Setting schema and model
-const settingSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true },
-  value: { type: mongoose.Schema.Types.Mixed }
-});
-const Setting = mongoose.model('Setting', settingSchema);
-
-async function migrateData() {
-  try {
-    // Read JSON data from file
-    const dataPath = path.join(__dirname, 'data', 'dynamicData.json');
-    let jsonData;
-    try {
-      const fileContent = fs.readFileSync(dataPath, 'utf-8');
-      jsonData = JSON.parse(fileContent);
-    } catch (err) {
-      console.warn('Could not read dynamicData.json file, using hardcoded data');
-      // Hardcoded JSON data from user initial message
-      jsonData = {
-        "profile": {
+"profile": {
           "name": "Raad Alzaeem",
           "title": "Full Stack Developer & Gamer",
           "description": "Passionate developer with experience in building web applications.",
@@ -215,22 +168,3 @@ async function migrateData() {
           }
         ]
       };
-    }
-    // Upsert each top-level key and value into Setting collection
-    const keys = Object.keys(jsonData);
-    for (const key of keys) {
-      await Setting.findOneAndUpdate(
-        { key },
-        { value: jsonData[key] },
-        { upsert: true, new: true }
-      );
-      console.log(`Migrated key: ${key}`);
-    }
-
-    console.log('Data migration completed successfully.');
-    process.exit(0);
-  } catch (error) {
-    console.error('Data migration failed:', error);
-    process.exit(1);
-  }
-}
